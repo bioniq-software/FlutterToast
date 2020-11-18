@@ -18,9 +18,13 @@ enum ToastGravity {
   SNACKBAR
 }
 
+enum TransitionType {
+  Fade,
+  Slide,
+}
+
 class Fluttertoast {
-  static const MethodChannel _channel =
-      const MethodChannel('PonnamKarthik/fluttertoast');
+  static const MethodChannel _channel = const MethodChannel('PonnamKarthik/fluttertoast');
 
   static Future<bool> cancel() async {
     bool res = await _channel.invokeMethod("cancel");
@@ -55,8 +59,7 @@ class Fluttertoast {
       gravityToast = "bottom";
     }
 
-    if (backgroundColor == null &&
-        defaultTargetPlatform == TargetPlatform.iOS) {
+    if (backgroundColor == null && defaultTargetPlatform == TargetPlatform.iOS) {
       backgroundColor = Colors.black;
     }
     if (textColor == null && defaultTargetPlatform == TargetPlatform.iOS) {
@@ -80,8 +83,7 @@ class Fluttertoast {
   }
 }
 
-typedef PositionedToastBuilder = Widget Function(
-    BuildContext context, Widget child);
+typedef PositionedToastBuilder = Widget Function(BuildContext context, Widget child);
 
 class FToast {
   BuildContext context;
@@ -109,8 +111,7 @@ class FToast {
     }
     _ToastEntry _toastEntry = _overlayQueue.removeAt(0);
     _entry = _toastEntry.entry;
-    if (context == null)
-      throw ("Error: Context is null, Please call init(context) before showing toast.");
+    if (context == null) throw ("Error: Context is null, Please call init(context) before showing toast.");
     Overlay.of(context).insert(_entry);
 
     _timer = Timer(_toastEntry.duration, () {
@@ -138,20 +139,20 @@ class FToast {
   void showToast({
     @required Widget child,
     PositionedToastBuilder positionedToastBuilder,
+    TransitionType transitionType = TransitionType.Fade,
     Duration toastDuration,
     ToastGravity gravity,
   }) {
     Widget newChild = _ToastStateFul(
-      child,
-      toastDuration ?? Duration(seconds: 2),
+      child: child,
+      duration: toastDuration ?? Duration(seconds: 2),
+      transitionType: transitionType,
     );
     OverlayEntry newEntry = OverlayEntry(builder: (context) {
-      if (positionedToastBuilder != null)
-        return positionedToastBuilder(context, newChild);
+      if (positionedToastBuilder != null) return positionedToastBuilder(context, newChild);
       return _getPostionWidgetBasedOnGravity(newChild, gravity);
     });
-    _overlayQueue.add(_ToastEntry(
-        entry: newEntry, duration: toastDuration ?? Duration(seconds: 2)));
+    _overlayQueue.add(_ToastEntry(entry: newEntry, duration: toastDuration ?? Duration(seconds: 2)));
     if (_timer == null) _showOverlay();
   }
 
@@ -167,8 +168,7 @@ class FToast {
         return Positioned(top: 100.0, right: 24.0, child: child);
         break;
       case ToastGravity.CENTER:
-        return Positioned(
-            top: 50.0, bottom: 50.0, left: 24.0, right: 24.0, child: child);
+        return Positioned(top: 50.0, bottom: 50.0, left: 24.0, right: 24.0, child: child);
         break;
       case ToastGravity.CENTER_LEFT:
         return Positioned(top: 50.0, bottom: 50.0, left: 24.0, child: child);
@@ -183,11 +183,7 @@ class FToast {
         return Positioned(bottom: 50.0, right: 24.0, child: child);
         break;
       case ToastGravity.SNACKBAR:
-        return Positioned(
-            bottom: MediaQuery.of(context).viewInsets.bottom,
-            left: 0,
-            right: 0,
-            child: child);
+        return Positioned(bottom: MediaQuery.of(context).viewInsets.bottom, left: 0, right: 0, child: child);
         break;
       case ToastGravity.BOTTOM:
       default:
@@ -204,17 +200,17 @@ class _ToastEntry {
 }
 
 class _ToastStateFul extends StatefulWidget {
-  _ToastStateFul(this.child, this.duration, {Key key}) : super(key: key);
-
   final Widget child;
   final Duration duration;
+  final TransitionType transitionType;
+
+  _ToastStateFul({this.child, this.duration, this.transitionType, Key key}) : super(key: key);
 
   @override
   ToastStateFulState createState() => ToastStateFulState();
 }
 
-class ToastStateFulState extends State<_ToastStateFul>
-    with SingleTickerProviderStateMixin {
+class ToastStateFulState extends State<_ToastStateFul> with SingleTickerProviderStateMixin {
   showIt() {
     _animationController.forward();
   }
@@ -226,6 +222,7 @@ class ToastStateFulState extends State<_ToastStateFul>
 
   AnimationController _animationController;
   Animation _fadeAnimation;
+  Animation<Offset> _slideAnimation;
 
   Timer _timer;
 
@@ -235,8 +232,14 @@ class ToastStateFulState extends State<_ToastStateFul>
       vsync: this,
       duration: const Duration(milliseconds: 350),
     );
-    _fadeAnimation =
-        CurvedAnimation(parent: _animationController, curve: Curves.easeIn);
+    _fadeAnimation = CurvedAnimation(parent: _animationController, curve: Curves.easeIn);
+    _slideAnimation = Tween<Offset>(
+      begin: Offset.zero,
+      end: const Offset(0.0, -1.5),
+    ).animate(CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeInOutCubic,
+    ));
     super.initState();
 
     showIt();
@@ -261,14 +264,27 @@ class ToastStateFulState extends State<_ToastStateFul>
 
   @override
   Widget build(BuildContext context) {
-    return FadeTransition(
-      opacity: _fadeAnimation,
-      child: Center(
-        child: Material(
-          color: Colors.transparent,
-          child: widget.child,
-        ),
-      ),
-    );
+    switch (widget.transitionType) {
+      case TransitionType.Fade:
+        return FadeTransition(
+          opacity: _fadeAnimation,
+          child: Center(
+            child: Material(
+              color: Colors.transparent,
+              child: widget.child,
+            ),
+          ),
+        );
+      case TransitionType.Slide:
+        return SlideTransition(
+          position: _slideAnimation,
+          child: Center(
+            child: Material(
+              color: Colors.transparent,
+              child: widget.child,
+            ),
+          ),
+        );
+    }
   }
 }

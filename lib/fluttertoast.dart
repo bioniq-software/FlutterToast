@@ -234,8 +234,8 @@ class ToastStateFulState extends State<_ToastStateFul> with SingleTickerProvider
     );
     _fadeAnimation = CurvedAnimation(parent: _animationController, curve: Curves.easeIn);
     _slideAnimation = Tween<Offset>(
-      begin: Offset.zero,
-      end: const Offset(0.0, -1.5),
+      begin: const Offset(0.0, -1.5),
+      end: Offset.zero,
     ).animate(CurvedAnimation(
       parent: _animationController,
       curve: Curves.easeInOutCubic,
@@ -265,9 +265,9 @@ class ToastStateFulState extends State<_ToastStateFul> with SingleTickerProvider
   @override
   Widget build(BuildContext context) {
     switch (widget.transitionType) {
-      case TransitionType.Fade:
-        return FadeTransition(
-          opacity: _fadeAnimation,
+      case TransitionType.Slide:
+        return SlideTransition(
+          position: _slideAnimation,
           child: Center(
             child: Material(
               color: Colors.transparent,
@@ -275,9 +275,10 @@ class ToastStateFulState extends State<_ToastStateFul> with SingleTickerProvider
             ),
           ),
         );
-      case TransitionType.Slide:
-        return SlideTransition(
-          position: _slideAnimation,
+      case TransitionType.Fade:
+      default:
+        return FadeTransition(
+          opacity: _fadeAnimation,
           child: Center(
             child: Material(
               color: Colors.transparent,
